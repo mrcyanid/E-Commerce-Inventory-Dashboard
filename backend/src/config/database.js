@@ -1,6 +1,13 @@
 const { Sequelize } = require('sequelize');
 const path = require('path');
 require('dotenv').config();
+const bcrypt = require('bcryptjs');
+
+// Import models
+const User = require('../models/User');
+const Product = require('../models/Product');
+const Category = require('../models/Category');
+const Order = require('../models/Order');
 
 const sequelize = new Sequelize({
     dialect: 'sqlite',
@@ -11,176 +18,93 @@ const sequelize = new Sequelize({
     }
 });
 
-const User = require('../models/User');
-
 const connectDB = async () => {
     try {
         await sequelize.authenticate();
         console.log('✅ SQLite3 database connected successfully!');
+        console.log(`📁 Database file: ${process.env.DB_STORAGE || './database.sqlite'}`);
         
+        // Sync all models
         await sequelize.sync({ alter: true });
         console.log('✅ All models synchronized!');
 
-        // ✅ AUTO-SEED USERS
-        const userCount = await User.count();
-        if (userCount === 0) {
-            console.log('📝 Seeding initial users...');
-            
-            const hashedPassword = await bcrypt.hash('admin123', 12);
-            
-            await User.bulkCreate([
-                {
-                    name: 'Admin User',
-                    email: 'admin@example.com',
-                    password: hashedPassword,
-                    role: 'admin'
-                },
-                {
-                    name: 'Staff User',
-                    email: 'staff@example.com',
-                    password: hashedPassword,
-                    role: 'staff'
-                }
+        // ============================================
+        // ✅ FORCE SEED - ALWAYS CREATE FRESH USERS
+        // ============================================
+        console.log('🔄 FORCE SEED: Removing existing users...');
+        
+        // Delete ALL existing users (clean start)
+        await User.destroy({ where: {} });
+        console.log('✅ All existing users removed.');
+        
+        console.log('📝 Creating fresh users...');
+        const hashedPassword = await bcrypt.hash('admin123', 12);
+        
+        // Create fresh users
+        const users = await User.bulkCreate([
+            {
+                name: 'Admin User',
+                email: 'admin@example.com',
+                password: hashedPassword,
+                role: 'admin',
+                isActive: true
+            },
+            {
+                name: 'Staff User',
+                email: 'staff@example.com',
+                password: hashedPassword,
+                role: 'staff',
+                isActive: true
+            }
+        ]);
+        
+        console.log(`✅ Created ${users.length} users successfully!`);
+        console.log('   👤 Admin: admin@example.com / admin123');
+        console.log('   👤 Staff: staff@example.com / admin123');
+
+        // ✅ AUTO-SEED CATEGORIES
+        console.log('📝 Checking categories...');
+        const categoryCount = await Category.count();
+        if (categoryCount === 0) {
+            console.log('📝 Creating default categories...');
+            await Category.bulkCreate([
+                { name: 'Electronics', description: 'Electronic devices and accessories' },
+                { name: 'Clothing', description: 'Apparel and fashion items' },
+                { name: 'Books', description: 'Books and educational materials' },
+                { name: 'Home & Garden', description: 'Home decor and garden supplies' }
             ]);
-            
-            console.log('✅ Users created successfully!');
-            console.log('   👤 Admin: admin@example.com / admin123');
-            console.log('   👤 Staff: staff@example.com / admin123');
+            console.log('✅ Categories created!');
+        } else {
+            console.log(`✅ ${categoryCount} categories already exist.`);
         }
+
+        // ✅ AUTO-SEED PRODUCTS
+        console.log('📝 Checking products...');
+        const productCount = await Product.count();
+        if (productCount === 0) {
+            console.log('📝 Creating default products...');
+            const categories = await Category.findAll();
+            if (categories.length > 0) {
+                await Product.bulkCreate([
+                    { name: 'Smartphone X', price: 699.99, stockQuantity: 50, sku: 'PHONE-001', categoryId: categories[0].id, lowStockThreshold: 10 },
+                    { name: 'Laptop Pro', price: 1299.99, stockQuantity: 30, sku: 'LAPTOP-001', categoryId: categories[0].id, lowStockThreshold: 5 },
+                    { name: 'T-Shirt', price: 29.99, stockQuantity: 100, sku: 'CLOTH-001', categoryId: categories[1].id, lowStockThreshold: 20 },
+                    { name: 'Programming Book', price: 49.99, stockQuantity: 75, sku: 'BOOK-001', categoryId: categories[2].id, lowStockThreshold: 15 }
+                ]);
+                console.log('✅ Products created!');
+            }
+        } else {
+            console.log(`✅ ${productCount} products already exist.`);
+        }
+
+        console.log('✅ Database initialization complete!');
+        console.log('🔐 You can now login with: admin@example.com / admin123');
 
     } catch (error) {
         console.error('❌ Database connection failed:', error.message);
+        console.error('❌ Full error:', error);
         process.exit(1);
     }
-};
-// Seed function for initial data
-const seedDatabase = async () => {
-    const { User, Category, Product, Order } = require('../models');
-    const bcrypt = require('bcryptjs');
-    
-    // Create categories
-    const categories = await Category.bulkCreate([
-        { name: 'Electronics', description: 'Electronic devices and accessories' },
-        { name: 'Clothing', description: 'Apparel and fashion items' },
-        { name: 'Books', description: 'Books and educational materials' },
-        { name: 'Home & Garden', description: 'Home decor and garden supplies' }
-    ]);
-    
-    // Create users (password: admin123)
-    const hashedPassword = await bcrypt.hash('admin123', 12);
-    const users = await User.bulkCreate([
-        { 
-            name: 'Admin User', 
-            email: 'admin@example.com', 
-            password: hashedPassword, 
-            role: 'admin' 
-        },
-        { 
-            name: 'Staff User', 
-            email: 'staff@example.com', 
-            password: hashedPassword, 
-            role: 'staff' 
-        }
-    ]);
-    
-    // Create products
-    const products = await Product.bulkCreate([
-        {
-            name: 'Smartphone X',
-            description: 'Latest 5G smartphone with 128GB storage',
-            price: 699.99,
-            stockQuantity: 50,
-            sku: 'PHONE-001',
-            categoryId: categories[0].id,
-            lowStockThreshold: 10
-        },
-        {
-            name: 'Laptop Pro',
-            description: 'High-performance laptop with 16GB RAM',
-            price: 1299.99,
-            stockQuantity: 30,
-            sku: 'LAPTOP-001',
-            categoryId: categories[0].id,
-            lowStockThreshold: 5
-        },
-        {
-            name: 'T-Shirt',
-            description: 'Comfortable cotton t-shirt',
-            price: 29.99,
-            stockQuantity: 100,
-            sku: 'CLOTH-001',
-            categoryId: categories[1].id,
-            lowStockThreshold: 20
-        },
-        {
-            name: 'Programming Book',
-            description: 'Learn Python programming',
-            price: 49.99,
-            stockQuantity: 75,
-            sku: 'BOOK-001',
-            categoryId: categories[2].id,
-            lowStockThreshold: 15
-        },
-        {
-            name: 'Wireless Headphones',
-            description: 'Noise-cancelling bluetooth headphones',
-            price: 199.99,
-            stockQuantity: 45,
-            sku: 'AUDIO-001',
-            categoryId: categories[0].id,
-            lowStockThreshold: 8
-        },
-        {
-            name: 'Coffee Mug',
-            description: 'Ceramic coffee mug with lid',
-            price: 14.99,
-            stockQuantity: 200,
-            sku: 'HOME-001',
-            categoryId: categories[3].id,
-            lowStockThreshold: 30
-        }
-    ]);
-    
-    // Create orders
-    await Order.bulkCreate([
-        {
-            orderNumber: 'ORD-001',
-            userId: users[0].id,
-            totalAmount: 729.98,
-            status: 'delivered',
-            shippingAddress: '123 Main St, Hyderabad',
-            paymentStatus: 'completed',
-            items: JSON.stringify([
-                { productId: products[0].id, quantity: 1, price: 699.99 },
-                { productId: products[2].id, quantity: 1, price: 29.99 }
-            ])
-        },
-        {
-            orderNumber: 'ORD-002',
-            userId: users[0].id,
-            totalAmount: 1299.99,
-            status: 'processing',
-            shippingAddress: '456 Park Ave, Hyderabad',
-            paymentStatus: 'pending',
-            items: JSON.stringify([
-                { productId: products[1].id, quantity: 1, price: 1299.99 }
-            ])
-        },
-        {
-            orderNumber: 'ORD-003',
-            userId: users[1].id,
-            totalAmount: 79.98,
-            status: 'shipped',
-            shippingAddress: '789 Lake Rd, Hyderabad',
-            paymentStatus: 'completed',
-            items: JSON.stringify([
-                { productId: products[2].id, quantity: 2, price: 29.99 },
-                { productId: products[5].id, quantity: 1, price: 14.99 }
-            ])
-        }
-    ]);
-    
-    console.log('✅ Seed data created successfully!');
 };
 
 module.exports = { sequelize, connectDB };
