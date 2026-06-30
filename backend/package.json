@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "description": "E-Commerce Inventory Dashboard API",
   "main": "src/app.js",
-  "scripts": {
+   "scripts": {
     "start": "node src/app.js",
-    "dev": "nodemon src/app.js"
+    "postinstall": "npm rebuild sqlite3"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
