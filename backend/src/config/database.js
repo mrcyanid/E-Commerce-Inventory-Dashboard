@@ -11,19 +11,48 @@ const sequelize = new Sequelize({
     }
 });
 
+const User = require('../models/User');
+
 const connectDB = async () => {
     try {
         await sequelize.authenticate();
         console.log('✅ SQLite3 database connected successfully!');
-        console.log(`📁 Database file: ${process.env.DB_STORAGE || './database.sqlite'}`);
+        
         await sequelize.sync({ alter: true });
         console.log('✅ All models synchronized!');
+
+        // ✅ AUTO-SEED USERS
+        const userCount = await User.count();
+        if (userCount === 0) {
+            console.log('📝 Seeding initial users...');
+            
+            const hashedPassword = await bcrypt.hash('admin123', 12);
+            
+            await User.bulkCreate([
+                {
+                    name: 'Admin User',
+                    email: 'admin@example.com',
+                    password: hashedPassword,
+                    role: 'admin'
+                },
+                {
+                    name: 'Staff User',
+                    email: 'staff@example.com',
+                    password: hashedPassword,
+                    role: 'staff'
+                }
+            ]);
+            
+            console.log('✅ Users created successfully!');
+            console.log('   👤 Admin: admin@example.com / admin123');
+            console.log('   👤 Staff: staff@example.com / admin123');
+        }
+
     } catch (error) {
         console.error('❌ Database connection failed:', error.message);
         process.exit(1);
     }
 };
-
 // Seed function for initial data
 const seedDatabase = async () => {
     const { User, Category, Product, Order } = require('../models');
