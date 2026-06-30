@@ -1,7 +1,7 @@
 const { Sequelize } = require('sequelize');
+const path = require('path');
 require('dotenv').config();
 
-// SQLite3 connection - NO SERVER NEEDED!
 const sequelize = new Sequelize({
     dialect: 'sqlite',
     storage: process.env.DB_STORAGE || path.join(__dirname, '../../database.sqlite'),
