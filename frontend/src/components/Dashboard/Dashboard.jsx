@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Table, Badge, Spinner, Button } from 'react-bootstrap';  // ← Added Button
+import { Container, Row, Col, Card, Table, Badge, Spinner } from 'react-bootstrap';
 import { FaBox, FaShoppingCart, FaUsers, FaDollarSign } from 'react-icons/fa';
 import StatsCard from './StatsCard';
 import api from '../../services/api';

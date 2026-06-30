@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Container, Row, Col, Card, Form, Button, Alert } from 'react-bootstrap';
 import { FaEnvelope, FaLock, FaUserGraduate } from 'react-icons/fa';
-import { Toaster } from 'react-hot-toast';
 
 const Login = () => {
     const [email, setEmail] = useState('admin@example.com');
