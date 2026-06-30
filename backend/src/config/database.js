@@ -5,16 +5,10 @@ require('dotenv').config();
 const sequelize = new Sequelize({
     dialect: 'sqlite',
     storage: process.env.DB_STORAGE || './database.sqlite',
+    dialectModule: require('better-sqlite3'), // Add this line
     logging: false,
     define: {
-        timestamps: true,
-        underscored: false
-    },
-    pool: {
-        max: 5,
-        min: 0,
-        acquire: 30000,
-        idle: 10000
+        timestamps: true
     }
 });
 
@@ -22,22 +16,8 @@ const connectDB = async () => {
     try {
         await sequelize.authenticate();
         console.log('✅ SQLite3 database connected successfully!');
-        console.log(`📁 Database file: ${process.env.DB_STORAGE || './database.sqlite'}`);
-        
-        // Sync all models - creates tables automatically
         await sequelize.sync({ alter: true });
-        console.log('✅ All models synchronized with SQLite3!');
-        
-        // Check if we need to seed data
-        const { User, Category, Product } = require('../models');
-        const userCount = await User.count();
-        
-        if (userCount === 0) {
-            console.log('📝 Seeding initial data...');
-            await seedDatabase();
-            console.log('✅ Initial data seeded successfully!');
-        }
-        
+        console.log('✅ All models synchronized!');
     } catch (error) {
         console.error('❌ Database connection failed:', error.message);
         process.exit(1);
