@@ -59,7 +59,7 @@ app.use((err, req, res, next) => {
 app.use((req, res) => {
     res.status(404).json({
         success: false,
-        message: 'Route not found'
+        message: `Route ${req.originalUrl} not found`
     });
 });
 
