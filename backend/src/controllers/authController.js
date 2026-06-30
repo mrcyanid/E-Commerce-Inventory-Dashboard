@@ -4,10 +4,13 @@ const { validationResult } = require('express-validator');
 
 // Generate JWT Token
 const generateToken = (id) => {
-    return jwt.sign({ id }, process.env.JWT_SECRET, {
-        expiresIn: process.env.JWT_EXPIRE
-    });
+    return jwt.sign(
+        { id }, 
+        process.env.JWT_SECRET, 
+        { expiresIn: '7d' }  // ✅ Must be a string like '7d' or number in seconds
+    );
 };
+
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -65,35 +68,39 @@ exports.register = async (req, res) => {
 // @route   POST /api/auth/login
 exports.login = async (req, res) => {
     try {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).json({
-                success: false,
-                errors: errors.array()
-            });
-        }
-
         const { email, password } = req.body;
+        
+        console.log('📝 Login attempt:', email);
 
-        // Check user
+        // Find user
         const user = await User.findOne({ where: { email } });
+        
         if (!user) {
+            console.log('❌ User not found:', email);
             return res.status(401).json({
                 success: false,
-                message: 'Invalid credentials'
+                message: 'Invalid email or password'
             });
         }
 
-        // Check password
+        console.log('✅ User found:', user.email);
+
+        // Compare password
         const isPasswordMatch = await user.comparePassword(password);
         if (!isPasswordMatch) {
+            console.log('❌ Password mismatch for:', email);
             return res.status(401).json({
                 success: false,
-                message: 'Invalid credentials'
+                message: 'Invalid email or password'
             });
         }
 
+        console.log('✅ Password matched for:', email);
+
+        // ✅ Generate token
         const token = generateToken(user.id);
+
+        console.log('✅ Login successful for:', email);
 
         res.status(200).json({
             success: true,
@@ -106,10 +113,12 @@ exports.login = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Login error:', error);
+        console.error('❌ Login error:', error);
+        console.error('❌ Error stack:', error.stack);
         res.status(500).json({
             success: false,
-            message: 'Server error'
+            message: 'Server error',
+            error: error.message
         });
     }
 };
@@ -126,6 +135,7 @@ exports.getMe = async (req, res) => {
             user
         });
     } catch (error) {
+        console.error('❌ Get user error:', error);
         res.status(500).json({
             success: false,
             message: 'Server error'
