@@ -1,4 +1,6 @@
 require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -16,6 +18,10 @@ const app = express();
 
 // Connect to database
 connectDB();
+const dbDir = path.dirname(process.env.DB_STORAGE || './database.sqlite');
+if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+}
 
 // Middleware
 app.use(helmet());

@@ -4,8 +4,7 @@ require('dotenv').config();
 // SQLite3 connection - NO SERVER NEEDED!
 const sequelize = new Sequelize({
     dialect: 'sqlite',
-    storage: process.env.DB_STORAGE || './database.sqlite',
-    dialectModule: require('better-sqlite3'), // Add this line
+    storage: process.env.DB_STORAGE || path.join(__dirname, '../../database.sqlite'),
     logging: false,
     define: {
         timestamps: true
@@ -16,6 +15,7 @@ const connectDB = async () => {
     try {
         await sequelize.authenticate();
         console.log('✅ SQLite3 database connected successfully!');
+        console.log(`📁 Database file: ${process.env.DB_STORAGE || './database.sqlite'}`);
         await sequelize.sync({ alter: true });
         console.log('✅ All models synchronized!');
     } catch (error) {
