@@ -38,6 +38,11 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/categories', categoryRoutes);
 
 // Health check
+app.get('/health', (req, res) => {
+    res.status(200).send('OK');
+});
+
+// API Health check
 app.get('/api/health', (req, res) => {
     res.status(200).json({
         success: true,
