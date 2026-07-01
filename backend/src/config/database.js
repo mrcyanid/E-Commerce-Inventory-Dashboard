@@ -30,53 +30,52 @@ const connectDB = async () => {
         console.log('✅ SQLite3 database connected successfully!');
         console.log(`📁 Database file: ${process.env.DB_STORAGE || './database.sqlite'}`);
         
-        await sequelize.sync({ force: true }); // ✅ Drop and recreate tables
+        // ✅ Force sync (drops and recreates tables)
+        await sequelize.sync({ force: true });
         console.log('✅ All models synchronized!');
 
         // ============================================
-        // ✅ SEED IN CORRECT ORDER
+        // ✅ CREATE USERS FIRST (MOST IMPORTANT)
         // ============================================
-
-        // Step 1: Create Users
         console.log('📝 Creating users...');
         const hashedPassword = await bcrypt.hash('admin123', 12);
-        const users = await User.bulkCreate([
-            {
-                name: 'Admin User',
-                email: 'admin@example.com',
-                password: hashedPassword,
-                role: 'admin',
-                isActive: true
-            },
-            {
-                name: 'Staff User',
-                email: 'staff@example.com',
-                password: hashedPassword,
-                role: 'staff',
-                isActive: true
-            }
-        ]);
-        console.log(`✅ Created ${users.length} users`);
+        
+        // ✅ Use raw SQL to create users (no foreign key issues)
+        await sequelize.query(`
+            INSERT INTO Users (name, email, password, role, isActive, createdAt, updatedAt)
+            VALUES 
+                ('Admin User', 'admin@example.com', '${hashedPassword}', 'admin', 1, datetime('now'), datetime('now')),
+                ('Staff User', 'staff@example.com', '${hashedPassword}', 'staff', 1, datetime('now'), datetime('now'))
+        `);
+        console.log('✅ Users created: admin@example.com / admin123');
 
-        // Step 2: Create Categories
+        // ============================================
+        // ✅ CREATE CATEGORIES
+        // ============================================
         console.log('📝 Creating categories...');
-        const categories = await Category.bulkCreate([
-            { name: 'Electronics', description: 'Electronic devices and accessories' },
-            { name: 'Clothing', description: 'Apparel and fashion items' },
-            { name: 'Books', description: 'Books and educational materials' },
-            { name: 'Home & Garden', description: 'Home decor and garden supplies' }
-        ]);
-        console.log(`✅ Created ${categories.length} categories`);
+        await sequelize.query(`
+            INSERT INTO Categories (name, description, isActive, createdAt, updatedAt)
+            VALUES 
+                ('Electronics', 'Electronic devices and accessories', 1, datetime('now'), datetime('now')),
+                ('Clothing', 'Apparel and fashion items', 1, datetime('now'), datetime('now')),
+                ('Books', 'Books and educational materials', 1, datetime('now'), datetime('now')),
+                ('Home & Garden', 'Home decor and garden supplies', 1, datetime('now'), datetime('now'))
+        `);
+        console.log('✅ Categories created!');
 
-        // Step 3: Create Products (with valid categoryId)
+        // ============================================
+        // ✅ CREATE PRODUCTS (with valid categoryIds)
+        // ============================================
         console.log('📝 Creating products...');
-        const products = await Product.bulkCreate([
-            { name: 'Smartphone X', price: 699.99, stockQuantity: 50, sku: 'PHONE-001', categoryId: categories[0].id, lowStockThreshold: 10 },
-            { name: 'Laptop Pro', price: 1299.99, stockQuantity: 30, sku: 'LAPTOP-001', categoryId: categories[0].id, lowStockThreshold: 5 },
-            { name: 'T-Shirt', price: 29.99, stockQuantity: 100, sku: 'CLOTH-001', categoryId: categories[1].id, lowStockThreshold: 20 },
-            { name: 'Programming Book', price: 49.99, stockQuantity: 75, sku: 'BOOK-001', categoryId: categories[2].id, lowStockThreshold: 15 }
-        ]);
-        console.log(`✅ Created ${products.length} products`);
+        await sequelize.query(`
+            INSERT INTO Products (name, price, stockQuantity, sku, categoryId, lowStockThreshold, isActive, createdAt, updatedAt)
+            VALUES 
+                ('Smartphone X', 699.99, 50, 'PHONE-001', 1, 10, 1, datetime('now'), datetime('now')),
+                ('Laptop Pro', 1299.99, 30, 'LAPTOP-001', 1, 5, 1, datetime('now'), datetime('now')),
+                ('T-Shirt', 29.99, 100, 'CLOTH-001', 2, 20, 1, datetime('now'), datetime('now')),
+                ('Programming Book', 49.99, 75, 'BOOK-001', 3, 15, 1, datetime('now'), datetime('now'))
+        `);
+        console.log('✅ Products created!');
 
         console.log('✅ Database initialization complete!');
         console.log('🔐 Login: admin@example.com / admin123');
