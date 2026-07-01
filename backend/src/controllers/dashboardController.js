@@ -1,18 +1,21 @@
-const { sequelize } = require('../config/database');
-const Product = require('../models/Product');
-const Order = require('../models/Order');
-const User = require('../models/User');
 const { Op } = require('sequelize');
+
+// ✅ Import ONLY from database.js (NOT from models/index)
+const { sequelize, User, Product, Order, Category } = require('../config/database');
 
 // @desc    Get dashboard statistics
 // @route   GET /api/dashboard/stats
 // @access  Admin & Staff (both can view)
 exports.getDashboardStats = async (req, res) => {
     try {
-        // Get total counts - these are safe for staff to view
+        console.log('📊 Fetching dashboard stats...');
+
+        // Get total counts
         const totalProducts = await Product.count();
         const totalOrders = await Order.count();
         const totalUsers = await User.count();
+
+        console.log(`📊 Stats: Products=${totalProducts}, Orders=${totalOrders}, Users=${totalUsers}`);
 
         // Get orders by status
         const ordersByStatus = await Order.findAll({

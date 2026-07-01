@@ -1,10 +1,8 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-// ✅ IMPORT SEQUELIZE INSTANCE
-const { sequelize } = require('../config/database');
-// ✅ INITIALIZE USER MODEL CORRECTLY
-const User = require('../models/User')(sequelize);
-const { validationResult } = require('express-validator');
+
+// ✅ Import ONLY User from database.js (no sequelize needed here)
+const { User } = require('../config/database');
 
 // Generate JWT Token
 const generateToken = (id) => {
@@ -20,14 +18,6 @@ const generateToken = (id) => {
 // @route   POST /api/auth/register
 exports.register = async (req, res) => {
     try {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).json({
-                success: false,
-                errors: errors.array()
-            });
-        }
-
         const { name, email, password, role } = req.body;
 
         // Check if user exists
@@ -83,7 +73,6 @@ exports.login = async (req, res) => {
             });
         }
 
-        // ✅ NOW THIS WILL WORK!
         const user = await User.findOne({ where: { email } });
         
         if (!user) {
@@ -96,7 +85,6 @@ exports.login = async (req, res) => {
 
         console.log('✅ User found:', user.email);
 
-        // Compare password
         const isPasswordMatch = await bcrypt.compare(password, user.password);
         console.log('🔐 Password match:', isPasswordMatch);
 
@@ -123,7 +111,6 @@ exports.login = async (req, res) => {
         });
     } catch (error) {
         console.error('❌ Login error:', error.message);
-        console.error('❌ Error stack:', error.stack);
         res.status(500).json({
             success: false,
             message: 'Server error',

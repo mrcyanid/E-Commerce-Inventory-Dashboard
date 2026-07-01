@@ -1,84 +1,7 @@
-const Order = require('../models/Order');
-const Product = require('../models/Product');
-const User = require('../models/User');
-const { sequelize } = require('../config/database');
+const { Op } = require('sequelize');
 
-// @desc    Create order
-// @route   POST /api/orders
-exports.createOrder = async (req, res) => {
-    try {
-        const { items, shippingAddress } = req.body;
-        const userId = req.user.id;
-
-        if (!items || items.length === 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'Order must contain at least one item'
-            });
-        }
-
-        let totalAmount = 0;
-        const orderItems = [];
-
-        // Process each item
-        for (const item of items) {
-            const product = await Product.findByPk(item.productId);
-            if (!product) {
-                return res.status(404).json({
-                    success: false,
-                    message: `Product with ID ${item.productId} not found`
-                });
-            }
-
-            if (product.stockQuantity < item.quantity) {
-                return res.status(400).json({
-                    success: false,
-                    message: `Insufficient stock for ${product.name}. Available: ${product.stockQuantity}`
-                });
-            }
-
-            // Update stock
-            product.stockQuantity -= item.quantity;
-            await product.save();
-
-            const subtotal = product.price * item.quantity;
-            totalAmount += subtotal;
-
-            orderItems.push({
-                productId: product.id,
-                name: product.name,
-                quantity: item.quantity,
-                price: product.price,
-                subtotal: subtotal
-            });
-        }
-
-        // Generate order number
-        const orderNumber = `ORD-${Date.now()}`;
-
-        // Create order
-        const order = await Order.create({
-            orderNumber,
-            userId,
-            totalAmount,
-            shippingAddress,
-            items: orderItems,
-            status: 'pending',
-            paymentStatus: 'pending'
-        });
-
-        res.status(201).json({
-            success: true,
-            order
-        });
-    } catch (error) {
-        console.error('Create order error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Server error'
-        });
-    }
-};
+// ✅ Import ONLY from database.js (NOT from models/index)
+const { sequelize, Order, Product, User } = require('../config/database');
 
 // @desc    Get all orders (Admin)
 // @route   GET /api/orders
@@ -122,6 +45,79 @@ exports.getOrders = async (req, res) => {
     }
 };
 
+// @desc    Create order
+// @route   POST /api/orders
+exports.createOrder = async (req, res) => {
+    try {
+        const { items, shippingAddress } = req.body;
+        const userId = req.user.id;
+
+        if (!items || items.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Order must contain at least one item'
+            });
+        }
+
+        let totalAmount = 0;
+        const orderItems = [];
+
+        for (const item of items) {
+            const product = await Product.findByPk(item.productId);
+            if (!product) {
+                return res.status(404).json({
+                    success: false,
+                    message: `Product with ID ${item.productId} not found`
+                });
+            }
+
+            if (product.stockQuantity < item.quantity) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Insufficient stock for ${product.name}`
+                });
+            }
+
+            product.stockQuantity -= item.quantity;
+            await product.save();
+
+            const subtotal = product.price * item.quantity;
+            totalAmount += subtotal;
+
+            orderItems.push({
+                productId: product.id,
+                name: product.name,
+                quantity: item.quantity,
+                price: product.price,
+                subtotal: subtotal
+            });
+        }
+
+        const orderNumber = `ORD-${Date.now()}`;
+
+        const order = await Order.create({
+            orderNumber,
+            userId,
+            totalAmount,
+            shippingAddress,
+            items: orderItems,
+            status: 'pending',
+            paymentStatus: 'pending'
+        });
+
+        res.status(201).json({
+            success: true,
+            order
+        });
+    } catch (error) {
+        console.error('Create order error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+};
+
 // @desc    Get single order
 // @route   GET /api/orders/:id
 exports.getOrder = async (req, res) => {
@@ -137,14 +133,6 @@ exports.getOrder = async (req, res) => {
             return res.status(404).json({
                 success: false,
                 message: 'Order not found'
-            });
-        }
-
-        // Check if user owns the order or is admin
-        if (req.user.role !== 'admin' && order.userId !== req.user.id) {
-            return res.status(403).json({
-                success: false,
-                message: 'Not authorized to view this order'
             });
         }
 

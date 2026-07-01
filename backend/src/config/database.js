@@ -3,6 +3,7 @@ const path = require('path');
 require('dotenv').config();
 const bcrypt = require('bcryptjs');
 
+// ✅ Initialize Sequelize FIRST
 const sequelize = new Sequelize({
     dialect: 'sqlite',
     storage: process.env.DB_STORAGE || path.join(__dirname, '../../database.sqlite'),
@@ -12,7 +13,7 @@ const sequelize = new Sequelize({
     }
 });
 
-// ✅ Import models
+// ✅ Initialize models with sequelize
 const User = require('../models/User')(sequelize);
 const Category = require('../models/Category')(sequelize);
 const Product = require('../models/Product')(sequelize);
@@ -24,23 +25,28 @@ Order.belongsTo(User, { foreignKey: 'userId' });
 Category.hasMany(Product, { foreignKey: 'categoryId' });
 Product.belongsTo(Category, { foreignKey: 'categoryId' });
 
+// ✅ EXPORT MODELS (THIS IS CRITICAL!)
+module.exports = {
+    sequelize,
+    User,
+    Product,
+    Order,
+    Category
+};
+
+// ✅ ConnectDB function
 const connectDB = async () => {
     try {
         await sequelize.authenticate();
         console.log('✅ SQLite3 database connected successfully!');
         console.log(`📁 Database file: ${process.env.DB_STORAGE || './database.sqlite'}`);
         
-        // ✅ Force sync (drops and recreates tables)
         await sequelize.sync({ force: true });
         console.log('✅ All models synchronized!');
 
-        // ============================================
-        // ✅ CREATE USERS FIRST (MOST IMPORTANT)
-        // ============================================
         console.log('📝 Creating users...');
         const hashedPassword = await bcrypt.hash('admin123', 12);
         
-        // ✅ Use raw SQL to create users (no foreign key issues)
         await sequelize.query(`
             INSERT INTO Users (name, email, password, role, isActive, createdAt, updatedAt)
             VALUES 
@@ -49,9 +55,6 @@ const connectDB = async () => {
         `);
         console.log('✅ Users created: admin@example.com / admin123');
 
-        // ============================================
-        // ✅ CREATE CATEGORIES
-        // ============================================
         console.log('📝 Creating categories...');
         await sequelize.query(`
             INSERT INTO Categories (name, description, isActive, createdAt, updatedAt)
@@ -63,9 +66,6 @@ const connectDB = async () => {
         `);
         console.log('✅ Categories created!');
 
-        // ============================================
-        // ✅ CREATE PRODUCTS (with valid categoryIds)
-        // ============================================
         console.log('📝 Creating products...');
         await sequelize.query(`
             INSERT INTO Products (name, price, stockQuantity, sku, categoryId, lowStockThreshold, isActive, createdAt, updatedAt)
@@ -87,4 +87,5 @@ const connectDB = async () => {
     }
 };
 
-module.exports = { sequelize, connectDB };
+// ✅ Export connectDB separately
+module.exports.connectDB = connectDB;

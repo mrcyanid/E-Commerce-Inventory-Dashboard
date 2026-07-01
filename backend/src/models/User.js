@@ -49,7 +49,12 @@ module.exports = (sequelize) => {
     });
 
     User.prototype.comparePassword = async function(candidatePassword) {
-        return await bcrypt.compare(candidatePassword, this.password);
+        try {
+            return await bcrypt.compare(candidatePassword, this.password);
+        } catch (error) {
+            console.error('Password comparison error:', error);
+            return false;
+        }
     };
 
     return User;

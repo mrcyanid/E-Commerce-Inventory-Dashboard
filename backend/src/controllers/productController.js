@@ -1,53 +1,7 @@
-const Product = require('../models/Product');
-const Category = require('../models/Category');
 const { Op } = require('sequelize');
 
-// @desc    Create product
-// @route   POST /api/products
-exports.createProduct = async (req, res) => {
-    try {
-        const { name, description, price, stockQuantity, sku, categoryId, lowStockThreshold } = req.body;
-
-        // Check if category exists
-        const category = await Category.findByPk(categoryId);
-        if (!category) {
-            return res.status(404).json({
-                success: false,
-                message: 'Category not found'
-            });
-        }
-
-        // Check if SKU exists
-        const productExists = await Product.findOne({ where: { sku } });
-        if (productExists) {
-            return res.status(400).json({
-                success: false,
-                message: 'Product with this SKU already exists'
-            });
-        }
-
-        const product = await Product.create({
-            name,
-            description,
-            price,
-            stockQuantity,
-            sku,
-            categoryId,
-            lowStockThreshold: lowStockThreshold || 10
-        });
-
-        res.status(201).json({
-            success: true,
-            product
-        });
-    } catch (error) {
-        console.error('Create product error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Server error'
-        });
-    }
-};
+// ✅ Import ONLY from database.js (NOT from models/index)
+const { sequelize, Product, Category } = require('../config/database');
 
 // @desc    Get all products with filters
 // @route   GET /api/products
@@ -66,7 +20,6 @@ exports.getProducts = async (req, res) => {
 
         const offset = (page - 1) * limit;
 
-        // Build filter conditions
         const where = {};
         if (search) {
             where[Op.or] = [
@@ -107,6 +60,51 @@ exports.getProducts = async (req, res) => {
         });
     } catch (error) {
         console.error('Get products error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+};
+
+// @desc    Create product
+// @route   POST /api/products
+exports.createProduct = async (req, res) => {
+    try {
+        const { name, description, price, stockQuantity, sku, categoryId, lowStockThreshold } = req.body;
+
+        const category = await Category.findByPk(categoryId);
+        if (!category) {
+            return res.status(404).json({
+                success: false,
+                message: 'Category not found'
+            });
+        }
+
+        const productExists = await Product.findOne({ where: { sku } });
+        if (productExists) {
+            return res.status(400).json({
+                success: false,
+                message: 'Product with this SKU already exists'
+            });
+        }
+
+        const product = await Product.create({
+            name,
+            description,
+            price,
+            stockQuantity,
+            sku,
+            categoryId,
+            lowStockThreshold: lowStockThreshold || 10
+        });
+
+        res.status(201).json({
+            success: true,
+            product
+        });
+    } catch (error) {
+        console.error('Create product error:', error);
         res.status(500).json({
             success: false,
             message: 'Server error'
@@ -214,12 +212,6 @@ exports.updateStock = async (req, res) => {
         }
 
         await product.update({ stockQuantity });
-
-        // Check for low stock alert
-        if (stockQuantity <= product.lowStockThreshold) {
-            // Here you could trigger a notification
-            console.log(`⚠️ Low stock alert: ${product.name} has ${stockQuantity} units left`);
-        }
 
         res.status(200).json({
             success: true,
