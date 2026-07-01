@@ -1,20 +1,20 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
-const { validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
+// ✅ IMPORT SEQUELIZE INSTANCE
+const { sequelize } = require('../config/database');
+// ✅ INITIALIZE USER MODEL CORRECTLY
+const User = require('../models/User')(sequelize);
+const { validationResult } = require('express-validator');
+
 // Generate JWT Token
 const generateToken = (id) => {
-    // Make sure JWT_SECRET exists
     const secret = process.env.JWT_SECRET || 'fallback_secret_do_not_use_in_production';
-    
-    // Hardcode expiresIn to '7d' - this ALWAYS works
     return jwt.sign(
-        { id: id.toString() }, 
-        secret, 
-        { expiresIn: '7d' }  // ✅ MUST be a string like '7d', '1h', '30d'
+        { id: id.toString() },
+        secret,
+        { expiresIn: '7d' }
     );
 };
-
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -76,7 +76,6 @@ exports.login = async (req, res) => {
         
         console.log('📝 Login attempt:', email);
 
-        // Validate input
         if (!email || !password) {
             return res.status(400).json({
                 success: false,
@@ -84,7 +83,7 @@ exports.login = async (req, res) => {
             });
         }
 
-        // Find user
+        // ✅ NOW THIS WILL WORK!
         const user = await User.findOne({ where: { email } });
         
         if (!user) {
@@ -98,18 +97,7 @@ exports.login = async (req, res) => {
         console.log('✅ User found:', user.email);
 
         // Compare password
-        let isPasswordMatch = false;
-        try {
-            if (typeof user.comparePassword === 'function') {
-                isPasswordMatch = await user.comparePassword(password);
-            } else {
-                isPasswordMatch = await bcrypt.compare(password, user.password);
-            }
-        } catch (error) {
-            console.error('❌ Password comparison error:', error);
-            isPasswordMatch = await bcrypt.compare(password, user.password);
-        }
-
+        const isPasswordMatch = await bcrypt.compare(password, user.password);
         console.log('🔐 Password match:', isPasswordMatch);
 
         if (!isPasswordMatch) {
@@ -120,11 +108,7 @@ exports.login = async (req, res) => {
             });
         }
 
-        // ✅ Generate token
-        console.log('🔑 Generating token for user:', user.id);
         const token = generateToken(user.id);
-        console.log('✅ Token generated successfully');
-
         console.log('✅ Login successful for:', email);
 
         res.status(200).json({
@@ -140,8 +124,6 @@ exports.login = async (req, res) => {
     } catch (error) {
         console.error('❌ Login error:', error.message);
         console.error('❌ Error stack:', error.stack);
-        
-        // Send more detailed error for debugging
         res.status(500).json({
             success: false,
             message: 'Server error',
