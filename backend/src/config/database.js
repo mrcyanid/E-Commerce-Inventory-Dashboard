@@ -3,12 +3,6 @@ const path = require('path');
 require('dotenv').config();
 const bcrypt = require('bcryptjs');
 
-// Import models
-const User = require('../models/User');
-const Product = require('../models/Product');
-const Category = require('../models/Category');
-const Order = require('../models/Order');
-
 const sequelize = new Sequelize({
     dialect: 'sqlite',
     storage: process.env.DB_STORAGE || path.join(__dirname, '../../database.sqlite'),
@@ -17,6 +11,18 @@ const sequelize = new Sequelize({
         timestamps: true
     }
 });
+
+// ✅ Import models CORRECTLY
+const User = require('../models/User')(sequelize);
+const Product = require('../models/Product')(sequelize);
+const Category = require('../models/Category')(sequelize);
+const Order = require('../models/Order')(sequelize);
+
+// ✅ Define associations
+User.hasMany(Order, { foreignKey: 'userId' });
+Order.belongsTo(User, { foreignKey: 'userId' });
+Category.hasMany(Product, { foreignKey: 'categoryId' });
+Product.belongsTo(Category, { foreignKey: 'categoryId' });
 
 const connectDB = async () => {
     try {

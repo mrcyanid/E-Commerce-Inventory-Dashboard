@@ -29,10 +29,6 @@ module.exports = (sequelize) => {
             allowNull: false,
             unique: true
         },
-        imageUrl: {
-            type: DataTypes.STRING,
-            allowNull: true
-        },
         categoryId: {
             type: DataTypes.INTEGER,
             allowNull: false

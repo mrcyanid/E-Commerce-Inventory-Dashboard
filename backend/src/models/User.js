@@ -1,7 +1,6 @@
 const { DataTypes } = require('sequelize');
 const bcrypt = require('bcryptjs');
 
-// ✅ Don't import sequelize directly - export a function that takes it
 module.exports = (sequelize) => {
     const User = sequelize.define('User', {
         id: {
@@ -11,10 +10,7 @@ module.exports = (sequelize) => {
         },
         name: {
             type: DataTypes.STRING,
-            allowNull: false,
-            validate: {
-                len: [2, 50]
-            }
+            allowNull: false
         },
         email: {
             type: DataTypes.STRING,
@@ -26,10 +22,7 @@ module.exports = (sequelize) => {
         },
         password: {
             type: DataTypes.STRING,
-            allowNull: false,
-            validate: {
-                len: [6, 100]
-            }
+            allowNull: false
         },
         role: {
             type: DataTypes.ENUM('admin', 'staff'),
@@ -55,14 +48,8 @@ module.exports = (sequelize) => {
         }
     });
 
-    // ✅ Add comparePassword method
     User.prototype.comparePassword = async function(candidatePassword) {
-        try {
-            return await bcrypt.compare(candidatePassword, this.password);
-        } catch (error) {
-            console.error('Password comparison error:', error);
-            return false;
-        }
+        return await bcrypt.compare(candidatePassword, this.password);
     };
 
     return User;

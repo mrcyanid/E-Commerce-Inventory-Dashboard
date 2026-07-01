@@ -37,8 +37,7 @@ module.exports = (sequelize) => {
             allowNull: false,
             get() {
                 try {
-                    const raw = this.getDataValue('items');
-                    return raw ? JSON.parse(raw) : [];
+                    return JSON.parse(this.getDataValue('items'));
                 } catch {
                     return [];
                 }
