@@ -12,10 +12,10 @@ const sequelize = new Sequelize({
     }
 });
 
-// ✅ Import models CORRECTLY
+// ✅ Import models
 const User = require('../models/User')(sequelize);
-const Product = require('../models/Product')(sequelize);
 const Category = require('../models/Category')(sequelize);
+const Product = require('../models/Product')(sequelize);
 const Order = require('../models/Order')(sequelize);
 
 // ✅ Define associations
@@ -30,16 +30,17 @@ const connectDB = async () => {
         console.log('✅ SQLite3 database connected successfully!');
         console.log(`📁 Database file: ${process.env.DB_STORAGE || './database.sqlite'}`);
         
-        await sequelize.sync({ alter: true });
+        await sequelize.sync({ force: true }); // ✅ Drop and recreate tables
         console.log('✅ All models synchronized!');
 
-        // ✅ Force seed users
-        console.log('🔄 Checking users...');
-        await User.destroy({ where: {} });
-        console.log('✅ Existing users removed.');
-        
+        // ============================================
+        // ✅ SEED IN CORRECT ORDER
+        // ============================================
+
+        // Step 1: Create Users
+        console.log('📝 Creating users...');
         const hashedPassword = await bcrypt.hash('admin123', 12);
-        await User.bulkCreate([
+        const users = await User.bulkCreate([
             {
                 name: 'Admin User',
                 email: 'admin@example.com',
@@ -55,11 +56,34 @@ const connectDB = async () => {
                 isActive: true
             }
         ]);
-        console.log('✅ Users created: admin@example.com / admin123');
+        console.log(`✅ Created ${users.length} users`);
+
+        // Step 2: Create Categories
+        console.log('📝 Creating categories...');
+        const categories = await Category.bulkCreate([
+            { name: 'Electronics', description: 'Electronic devices and accessories' },
+            { name: 'Clothing', description: 'Apparel and fashion items' },
+            { name: 'Books', description: 'Books and educational materials' },
+            { name: 'Home & Garden', description: 'Home decor and garden supplies' }
+        ]);
+        console.log(`✅ Created ${categories.length} categories`);
+
+        // Step 3: Create Products (with valid categoryId)
+        console.log('📝 Creating products...');
+        const products = await Product.bulkCreate([
+            { name: 'Smartphone X', price: 699.99, stockQuantity: 50, sku: 'PHONE-001', categoryId: categories[0].id, lowStockThreshold: 10 },
+            { name: 'Laptop Pro', price: 1299.99, stockQuantity: 30, sku: 'LAPTOP-001', categoryId: categories[0].id, lowStockThreshold: 5 },
+            { name: 'T-Shirt', price: 29.99, stockQuantity: 100, sku: 'CLOTH-001', categoryId: categories[1].id, lowStockThreshold: 20 },
+            { name: 'Programming Book', price: 49.99, stockQuantity: 75, sku: 'BOOK-001', categoryId: categories[2].id, lowStockThreshold: 15 }
+        ]);
+        console.log(`✅ Created ${products.length} products`);
+
         console.log('✅ Database initialization complete!');
+        console.log('🔐 Login: admin@example.com / admin123');
 
     } catch (error) {
         console.error('❌ Database connection failed:', error.message);
+        console.error('❌ Full error:', error);
         process.exit(1);
     }
 };
